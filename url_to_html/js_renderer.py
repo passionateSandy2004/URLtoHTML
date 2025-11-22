@@ -3,6 +3,7 @@ JS rendering via external REST API (Decodo).
 """
 
 import logging
+import os
 import requests
 import urllib3
 from typing import Optional, Dict
@@ -11,10 +12,10 @@ from .exceptions import JSRenderError, TimeoutError
 # Disable SSL warnings for Decodo proxy
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Decodo API credentials (hardcoded)
-DECODO_USERNAME = "U0000325820"
-DECODO_PASSWORD = "PW_19849a2d58cbbf2af5e39e3a38693d1ba"
-DECODO_API_ENDPOINT = "https://unblock.decodo.com:60000"
+# Decodo API credentials (loaded from environment variables)
+DECODO_USERNAME = os.getenv("DECODO_USERNAME", "U0000325820")
+DECODO_PASSWORD = os.getenv("DECODO_PASSWORD", "PW_19849a2d58cbbf2af5e39e3a38693d1ba")
+DECODO_API_ENDPOINT = os.getenv("DECODO_API_ENDPOINT", "https://unblock.decodo.com:60000")
 # IMPORTANT: Decodo can only process 3 URLs concurrently at a time
 DECODO_MAX_CONCURRENT = 3
 

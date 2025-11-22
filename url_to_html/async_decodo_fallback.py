@@ -5,6 +5,7 @@ Processes 3 URLs at a time (Decodo's limit).
 """
 
 import logging
+import os
 import asyncio
 import aiohttp
 import urllib3
@@ -14,10 +15,10 @@ from .exceptions import JSRenderError, TimeoutError
 # Disable SSL warnings for Decodo proxy
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Decodo API credentials (hardcoded)
-DECODO_USERNAME = "U0000325820"
-DECODO_PASSWORD = "PW_19849a2d58cbbf2af5e39e3a38693d1ba"
-DECODO_API_ENDPOINT = "https://unblock.decodo.com:60000"
+# Decodo API credentials (loaded from environment variables)
+DECODO_USERNAME = os.getenv("DECODO_USERNAME", "U0000325820")
+DECODO_PASSWORD = os.getenv("DECODO_PASSWORD", "PW_19849a2d58cbbf2af5e39e3a38693d1ba")
+DECODO_API_ENDPOINT = os.getenv("DECODO_API_ENDPOINT", "https://unblock.decodo.com:60000")
 DECODO_MAX_CONCURRENT = 3  # Decodo's hard limit
 
 logger = logging.getLogger(__name__)
