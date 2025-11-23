@@ -399,6 +399,47 @@ for method, results in by_method.items():
 3. **Adjust Batch Sizes**: Larger batches reduce overhead but increase memory usage
 4. **Use Appropriate Timeouts**: Large batches may need longer timeouts
 
+## Concurrent Requests Capacity
+
+### How Many URLs Can It Handle?
+
+The API can handle **unlimited concurrent requests**, but total throughput depends on custom JS services:
+
+- **10 clients × 100 URLs = 1,000 URLs**: ✅ Works well with 13 services (~6-8 min)
+- **50 clients × 100 URLs = 5,000 URLs**: ⚠️ Needs 50+ services (~20-30 min)
+- **100 clients × 100 URLs = 10,000 URLs**: ⚠️ Needs 100+ services (~10-15 min)
+
+### How It Works
+
+- Each request is **independent** and processes asynchronously
+- Static/XHR phase: 100 concurrent **per request** (no bottleneck)
+- Custom JS phase: **Shared pool** of services (main bottleneck)
+- Decodo phase: 3 concurrent **per request** (no bottleneck)
+
+### Example: 10 Concurrent Clients
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+from client import URLToHTMLClient
+
+def process_client(client_id, urls):
+    client = URLToHTMLClient("https://urltohtml-production.up.railway.app")
+    response = client.fetch_batch(urls)
+    print(f"Client {client_id}: {response.summary.success} successful")
+    client.close()
+
+# 10 clients, each with 100 URLs
+urls_per_client = 100
+client_batches = [generate_urls(i, urls_per_client) for i in range(10)]
+
+with ThreadPoolExecutor(max_workers=10) as executor:
+    executor.map(process_client, range(10), client_batches)
+```
+
+**Result**: All 10 clients process simultaneously, sharing the custom JS service pool.
+
+See `docs/CAPACITY_FAQ.md` for detailed capacity information.
+
 ## Error Handling
 
 The client raises `requests.HTTPError` for API errors. Always handle exceptions:

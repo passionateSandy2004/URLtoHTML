@@ -41,6 +41,7 @@ class APIConfig:
     DEFAULT_CUSTOM_JS_TIMEOUT: int = int(os.getenv("DEFAULT_CUSTOM_JS_TIMEOUT", "300"))
     DEFAULT_DECODO_ENABLED: bool = os.getenv("DEFAULT_DECODO_ENABLED", "true").lower() == "true"
     DEFAULT_DECODO_TIMEOUT: int = int(os.getenv("DEFAULT_DECODO_TIMEOUT", "180"))
+    DEFAULT_DECODO_MAX_CONCURRENT: int = int(os.getenv("DEFAULT_DECODO_MAX_CONCURRENT", "50"))
     
     # Custom JS service endpoints (comma-separated)
     CUSTOM_JS_SERVICES: Optional[List[str]] = None
@@ -51,10 +52,21 @@ class APIConfig:
             if service.strip()
         ]
     
-    # Decodo credentials
+    # Decodo Web Scraping API credentials and configuration
     DECODO_USERNAME: Optional[str] = os.getenv("DECODO_USERNAME")
     DECODO_PASSWORD: Optional[str] = os.getenv("DECODO_PASSWORD")
-    DECODO_API_ENDPOINT: Optional[str] = os.getenv("DECODO_API_ENDPOINT", "https://unblock.decodo.com:60000")
+    DECODO_API_ENDPOINT: Optional[str] = os.getenv(
+        "DECODO_API_ENDPOINT",
+        "https://scraper-api.decodo.com/v2/task/batch"
+    )
+    DECODO_RESULTS_ENDPOINT: Optional[str] = os.getenv(
+        "DECODO_RESULTS_ENDPOINT",
+        "https://scraper-api.decodo.com/v2/task"
+    )
+    DECODO_TARGET: str = os.getenv("DECODO_TARGET", "universal")
+    DECODO_DEVICE_TYPE: str = os.getenv("DECODO_DEVICE_TYPE", "desktop")
+    DECODO_POLL_INTERVAL: int = int(os.getenv("DECODO_POLL_INTERVAL", "2"))
+    DECODO_MAX_POLL_ATTEMPTS: int = int(os.getenv("DECODO_MAX_POLL_ATTEMPTS", "30"))
     
     # Content analyzer defaults
     DEFAULT_MIN_CONTENT_LENGTH: int = int(os.getenv("DEFAULT_MIN_CONTENT_LENGTH", "1000"))

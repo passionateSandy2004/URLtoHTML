@@ -21,13 +21,19 @@ class BatchFetcherConfig:
         custom_js_cooldown_seconds: int = 120,  # 2 minutes
         custom_js_timeout: int = 300,  # 5 minutes for batch
         
-        # Decodo (fallback only)
+        # Decodo Web Scraping API (fallback only)
         decodo_enabled: bool = True,
-        decodo_max_concurrent: int = 3,
+        decodo_max_concurrent: int = 50,
         decodo_timeout: int = 180,
-        decodo_headless_mode: str = "html",
+        decodo_headless_mode: str = "html",  # Kept for compatibility, not used
         decodo_location: Optional[str] = None,
         decodo_language: Optional[str] = None,
+        decodo_target: str = "universal",
+        decodo_device_type: str = "desktop",
+        decodo_api_endpoint: Optional[str] = None,
+        decodo_results_endpoint: Optional[str] = None,
+        decodo_poll_interval: int = 2,
+        decodo_max_poll_attempts: int = 30,
         
         # Content analyzer
         min_content_length: int = 1000,
@@ -54,11 +60,17 @@ class BatchFetcherConfig:
             custom_js_timeout: Timeout for batch requests
             
             decodo_enabled: Whether to use Decodo as fallback
-            decodo_max_concurrent: Max concurrent Decodo requests (default: 3)
+            decodo_max_concurrent: Max concurrent Decodo polling requests (default: 50)
             decodo_timeout: Timeout for Decodo requests
-            decodo_headless_mode: Decodo rendering mode
-            decodo_location: Decodo geographic location
-            decodo_language: Decodo language locale
+            decodo_headless_mode: Not used (kept for compatibility)
+            decodo_location: Decodo geographic location (e.g., "United States")
+            decodo_language: Decodo language locale (e.g., "en-us")
+            decodo_target: Scraping target template (default: "universal")
+            decodo_device_type: Device type (default: "desktop")
+            decodo_api_endpoint: Batch API endpoint (default: from env)
+            decodo_results_endpoint: Results API endpoint base (default: from env)
+            decodo_poll_interval: Polling interval in seconds (default: 2)
+            decodo_max_poll_attempts: Max polling attempts per task (default: 30)
             
             min_content_length: Minimum content length threshold
             min_text_length: Minimum text length threshold
@@ -97,13 +109,19 @@ class BatchFetcherConfig:
         self.custom_js_cooldown_seconds = custom_js_cooldown_seconds
         self.custom_js_timeout = custom_js_timeout
         
-        # Decodo
+        # Decodo Web Scraping API
         self.decodo_enabled = decodo_enabled
         self.decodo_max_concurrent = decodo_max_concurrent
         self.decodo_timeout = decodo_timeout
         self.decodo_headless_mode = decodo_headless_mode
         self.decodo_location = decodo_location
         self.decodo_language = decodo_language
+        self.decodo_target = decodo_target
+        self.decodo_device_type = decodo_device_type
+        self.decodo_api_endpoint = decodo_api_endpoint
+        self.decodo_results_endpoint = decodo_results_endpoint
+        self.decodo_poll_interval = decodo_poll_interval
+        self.decodo_max_poll_attempts = decodo_max_poll_attempts
         
         # Content analyzer
         self.min_content_length = min_content_length

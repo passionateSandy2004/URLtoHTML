@@ -142,7 +142,16 @@ async def fetch_batch(request: BatchRequest):
         logger.info(f"Received batch request for {len(url_strings)} URLs")
         
         # Build configuration from request and defaults
-        config = BatchFetcherConfig()
+        config = BatchFetcherConfig(
+            # Set Decodo defaults from APIConfig
+            decodo_max_concurrent=APIConfig.DEFAULT_DECODO_MAX_CONCURRENT,
+            decodo_target=APIConfig.DECODO_TARGET,
+            decodo_device_type=APIConfig.DECODO_DEVICE_TYPE,
+            decodo_api_endpoint=APIConfig.DECODO_API_ENDPOINT,
+            decodo_results_endpoint=APIConfig.DECODO_RESULTS_ENDPOINT,
+            decodo_poll_interval=APIConfig.DECODO_POLL_INTERVAL,
+            decodo_max_poll_attempts=APIConfig.DECODO_MAX_POLL_ATTEMPTS
+        )
         
         # Apply request config overrides if provided
         if request.config:

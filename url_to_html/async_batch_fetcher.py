@@ -213,7 +213,14 @@ async def async_fetch_batch(
         timeout=config.decodo_timeout,
         headless_mode=config.decodo_headless_mode,
         location=config.decodo_location,
-        language=config.decodo_language
+        language=config.decodo_language,
+        target=config.decodo_target,
+        device_type=config.decodo_device_type,
+        api_endpoint=config.decodo_api_endpoint,
+        results_endpoint=config.decodo_results_endpoint,
+        max_concurrent=config.decodo_max_concurrent,
+        poll_interval=config.decodo_poll_interval,
+        max_poll_attempts=config.decodo_max_poll_attempts
     )
     
     phase3_results = await decodo_fallback.process_urls(decodo_urls)
