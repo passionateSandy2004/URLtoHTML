@@ -12,11 +12,24 @@ import re
 from urllib.parse import urlparse
 
 # Configuration
-CUSTOM_JS_SERVICE_URL = "https://easygoing-strength-copy-copy-copy-1-production.up.railway.app/render"
+CUSTOM_JS_SERVICE_URL = "https://easygoing-strength-copy-2-copy-2-production.up.railway.app/render"
 
-# Your URLs to process
+# Your URLs to process (62 URLs from CSV with {query} replaced by "Glasses")
 urls = [
-    "https://www.sangeethamobiles.com/search-result/Home+Steamers"
+    "https://somethingsbrewing.in/search?options%5Bprefix%5D=last&q=stove",
+    "https://shop.ttkprestige.com/catalogsearch/result/?q=stove",
+    "https://www.croma.com/searchB?q=phone",
+    "https://www.carysilshop.com/search?q=phone",
+    "https://lovebeautyandplanet.in/pages/search?q=phone",
+    "https://www.nykaa.com/?search-suggestions-nykaa=phone",
+    "https://www.reliancedigital.in/collection/phone",
+    "https://www.sangeethamobiles.com/search-result/phone",
+    "https://www.wonderchef.com/search?q=stove",
+    "https://www.domesticappliances.philips.co.in/pages/searchtap-search?q=stove",
+    "https://agarolifestyle.com/pages/expertrec-search?q=stove",
+    "https://wwxw.naaptol.com/search.html?type=srch_catlg&kw=stove",
+    "https://rbzone.com/catalogsearch/result/?q=phone",
+    "https://www.adidas.co.in/running-shoes",
 ]
 
 # Function to save HTML to file
@@ -179,4 +192,3 @@ except Exception as e:
 print("\n" + "=" * 60)
 print("DONE")
 print("=" * 60)
-

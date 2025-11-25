@@ -177,7 +177,25 @@ class ContentAnalyzer:
             return True, "Empty content"
         
         # Skip skeleton detection for whitelisted domains - accept whatever custom JS returns
-        whitelisted_domains = ['myntra.com', 'sangeethamobiles.com']
+        whitelisted_domains = [
+            'myntra.com',
+            'sangeethamobiles.com',
+            'paiinternational.in',
+            'myg.in',
+            'darlingretail.com',
+            'ajio.com',
+            'xtepindia.com',
+            'lakhanifootwear.com',
+            'skechers.in',
+            'somethingsbrewing.in',
+            'shop.ttkprestige.com',
+            'reliancedigital.in',
+            'wonderchef.com',
+            'domesticappliances.philips.co.in',
+            'agarolifestyle.com',
+            'naaptol.com',
+            'rbzone.com'
+        ]
         if url:
             url_lower = url.lower()
             for domain in whitelisted_domains:

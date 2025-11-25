@@ -3,6 +3,35 @@ Configuration for batch processing.
 """
 
 from typing import Optional, Dict, List
+from urllib.parse import urlparse
+
+
+def _normalize_domain(value: Optional[str]) -> Optional[str]:
+    """Normalize domain strings to bare hostnames without scheme or path."""
+    if not value:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    if "://" not in candidate:
+        candidate = f"https://{candidate}"
+    parsed = urlparse(candidate)
+    host = parsed.netloc or parsed.path
+    host = host.lower().strip()
+    if host.startswith("www."):
+        host = host[4:]
+    return host or None
+
+
+def _normalize_domain_list(domains: Optional[List[str]]) -> List[str]:
+    """Normalize a list of domains."""
+    normalized = []
+    if domains:
+        for domain in domains:
+            normalized_domain = _normalize_domain(domain)
+            if normalized_domain:
+                normalized.append(normalized_domain)
+    return normalized
 
 
 class BatchFetcherConfig:
@@ -21,6 +50,7 @@ class BatchFetcherConfig:
         custom_js_cooldown_seconds: int = 120,  # 2 minutes
         custom_js_timeout: int = 300,  # 5 minutes for batch
         custom_js_max_retries: int = 10,  # Max retry attempts for failed/skeleton URLs
+        custom_js_skip_domains: Optional[List[str]] = None,
         
         # Decodo Web Scraping API (fallback only)
         decodo_enabled: bool = True,
@@ -60,6 +90,7 @@ class BatchFetcherConfig:
             custom_js_cooldown_seconds: Cooldown between batches (default: 120)
             custom_js_timeout: Timeout for batch requests
             custom_js_max_retries: Max retry attempts for failed/skeleton URLs (default: 10)
+            custom_js_skip_domains: Domains that should bypass custom JS and go straight to Decodo
             
             decodo_enabled: Whether to use Decodo as fallback
             decodo_max_concurrent: Max concurrent Decodo polling requests (default: 50)
@@ -111,6 +142,7 @@ class BatchFetcherConfig:
         self.custom_js_cooldown_seconds = custom_js_cooldown_seconds
         self.custom_js_timeout = custom_js_timeout
         self.custom_js_max_retries = custom_js_max_retries
+        self.custom_js_skip_domains = _normalize_domain_list(custom_js_skip_domains)
         
         # Decodo Web Scraping API
         self.decodo_enabled = decodo_enabled
@@ -136,4 +168,8 @@ class BatchFetcherConfig:
         self.save_outputs = save_outputs
         self.output_dir = output_dir
         self.enable_logging = enable_logging
+
+    def set_custom_js_skip_domains(self, domains: Optional[List[str]]):
+        """Update the list of domains that should bypass custom JS."""
+        self.custom_js_skip_domains = _normalize_domain_list(domains)
 

@@ -6,6 +6,7 @@ import logging
 import time
 import os
 from typing import List, Dict, Optional
+from urllib.parse import urlparse
 from .async_static_xhr_processor import AsyncStaticXHRProcessor
 from .async_multi_service_js_renderer import AsyncMultiServiceJSRenderer
 from .async_decodo_fallback import AsyncDecodoFallback
@@ -45,6 +46,26 @@ def _save_html_to_file(html_content: str, url: str, method: str, output_dir: str
     except Exception as e:
         logger.warning(f"Failed to save {method} output: {e}")
         return ""
+
+
+def _extract_hostname(url: str) -> str:
+    """Return normalized hostname (without www.) from URL."""
+    parsed = urlparse(url)
+    hostname = (parsed.netloc or parsed.path).lower()
+    if hostname.startswith("www."):
+        hostname = hostname[4:]
+    return hostname
+
+
+def _should_skip_custom_js(url: str, excluded_domains: Optional[List[str]]) -> bool:
+    """Determine if URL should bypass custom JS based on configured domains."""
+    if not excluded_domains:
+        return False
+    hostname = _extract_hostname(url)
+    return any(
+        hostname == domain or hostname.endswith(f".{domain}")
+        for domain in excluded_domains
+    )
 
 
 async def async_fetch_batch(
@@ -121,89 +142,107 @@ async def async_fetch_batch(
             error=None
         )
     
-    logger.info(f"Phase 1 completed: {len(successful_urls)} successful, {len(js_urls)} need JS rendering")
+    decodo_direct_urls = []
+    if config.custom_js_skip_domains:
+        filtered_js_urls = []
+        for url in js_urls:
+            if _should_skip_custom_js(url, config.custom_js_skip_domains):
+                decodo_direct_urls.append(url)
+            else:
+                filtered_js_urls.append(url)
+        js_urls = filtered_js_urls
     
-    if not js_urls:
+    logger.info(f"Phase 1 completed: {len(successful_urls)} successful, {len(js_urls)} need JS rendering")
+    if decodo_direct_urls:
+        logger.info(f"{len(decodo_direct_urls)} URL(s) are configured to skip custom JS and will go directly to Decodo.")
+    
+    if not js_urls and not decodo_direct_urls:
         # All URLs succeeded in Phase 1
         total_time = time.time() - start_time
         return aggregator.get_final_result(total_time)
     
-    # Phase 2: Custom JS Rendering (Multi-Service) with Retry
-    logger.info("=" * 80)
-    logger.info("PHASE 2: Custom JS Rendering (Multi-Service) with Retry")
-    logger.info("=" * 80)
-    
-    # Use multi-service renderer for parallel processing
-    custom_js_renderer = AsyncMultiServiceJSRenderer(
-        service_endpoints=config.custom_js_service_endpoints,
-        batch_size=config.custom_js_batch_size,
-        cooldown_seconds=config.custom_js_cooldown_seconds,
-        timeout=config.custom_js_timeout
-    )
-    
-    logger.info(f"Using {len(config.custom_js_service_endpoints)} services for parallel processing")
-    
-    # Initialize content analyzer for skeleton detection
-    content_analyzer = ContentAnalyzer()
-    
-    # Retry logic: up to N attempts for failed/skeleton URLs
-    max_retries = config.custom_js_max_retries
-    urls_to_process = js_urls.copy()
     custom_js_successful = []
+    phase2_results = []
+    decodo_urls = decodo_direct_urls.copy()
     
-    for attempt in range(1, max_retries + 1):
-        if not urls_to_process:
-            break
+    if js_urls:
+        # Phase 2: Custom JS Rendering (Multi-Service) with Retry
+        logger.info("=" * 80)
+        logger.info("PHASE 2: Custom JS Rendering (Multi-Service) with Retry")
+        logger.info("=" * 80)
         
-        logger.info(f"Custom JS rendering attempt {attempt}/{max_retries} for {len(urls_to_process)} URLs")
+        # Use multi-service renderer for parallel processing
+        custom_js_renderer = AsyncMultiServiceJSRenderer(
+            service_endpoints=config.custom_js_service_endpoints,
+            batch_size=config.custom_js_batch_size,
+            cooldown_seconds=config.custom_js_cooldown_seconds,
+            timeout=config.custom_js_timeout
+        )
         
-        # Process current batch of URLs
-        phase2_results = await custom_js_renderer.process_urls(urls_to_process)
+        logger.info(f"Using {len(config.custom_js_service_endpoints)} services for parallel processing")
         
-        # Track URLs that need retry
-        retry_urls = []
+        # Initialize content analyzer for skeleton detection
+        content_analyzer = ContentAnalyzer()
         
-        for result in phase2_results:
-            if result["status"] == "success":
-                # Check if successful result is actually skeleton content
-                if result["html"]:
-                    is_skeleton, skeleton_reason = content_analyzer.is_custom_js_skeleton(
-                        result["html"], 
-                        url=result["url"]
-                    )
-                    if is_skeleton:
-                        logger.info(f"Custom JS result for {result['url']} detected as skeleton: {skeleton_reason}")
-                        retry_urls.append(result["url"])
-                        continue
-                
-                # Valid result, add to successful
-                custom_js_successful.append(result)
-                logger.debug(f"Custom JS success for {result['url']} on attempt {attempt}")
-                
-                # Save output if configured
-                if config.save_outputs and result["html"]:
-                    _save_html_to_file(
-                        result["html"],
-                        result["url"],
-                        "custom_js",
-                        config.output_dir
-                    )
+        # Retry logic: up to N attempts for failed/skeleton URLs
+        max_retries = config.custom_js_max_retries
+        urls_to_process = js_urls.copy()
+        
+        for attempt in range(1, max_retries + 1):
+            if not urls_to_process:
+                break
+            
+            logger.info(f"Custom JS rendering attempt {attempt}/{max_retries} for {len(urls_to_process)} URLs")
+            
+            # Process current batch of URLs
+            phase2_results = await custom_js_renderer.process_urls(urls_to_process)
+            
+            # Track URLs that need retry
+            retry_urls = []
+            
+            for result in phase2_results:
+                if result["status"] == "success":
+                    # Check if successful result is actually skeleton content
+                    if result["html"]:
+                        is_skeleton, skeleton_reason = content_analyzer.is_custom_js_skeleton(
+                            result["html"], 
+                            url=result["url"]
+                        )
+                        if is_skeleton:
+                            logger.info(f"Custom JS result for {result['url']} detected as skeleton: {skeleton_reason}")
+                            retry_urls.append(result["url"])
+                            continue
+                    
+                    # Valid result, add to successful
+                    custom_js_successful.append(result)
+                    logger.debug(f"Custom JS success for {result['url']} on attempt {attempt}")
+                    
+                    # Save output if configured
+                    if config.save_outputs and result["html"]:
+                        _save_html_to_file(
+                            result["html"],
+                            result["url"],
+                            "custom_js",
+                            config.output_dir
+                        )
+                else:
+                    # Failed, add to retry list
+                    logger.debug(f"Custom JS failed for {result['url']} on attempt {attempt}: {result.get('error', 'Unknown error')}")
+                    retry_urls.append(result["url"])
+            
+            # Update URLs to process for next iteration
+            urls_to_process = retry_urls
+            
+            if urls_to_process:
+                logger.info(f"Attempt {attempt} completed: {len(custom_js_successful)} successful so far, {len(urls_to_process)} need retry")
             else:
-                # Failed, add to retry list
-                logger.debug(f"Custom JS failed for {result['url']} on attempt {attempt}: {result.get('error', 'Unknown error')}")
-                retry_urls.append(result["url"])
+                logger.info(f"All URLs succeeded after {attempt} attempts")
+                break
         
-        # Update URLs to process for next iteration
-        urls_to_process = retry_urls
-        
-        if urls_to_process:
-            logger.info(f"Attempt {attempt} completed: {len(custom_js_successful)} successful so far, {len(urls_to_process)} need retry")
-        else:
-            logger.info(f"All URLs succeeded after {attempt} attempts")
-            break
-    
-    # After all retries, remaining failed URLs go to Decodo
-    decodo_urls = urls_to_process
+        # After all retries, remaining failed URLs go to Decodo along with any direct-skip URLs
+        decodo_urls.extend(urls_to_process)
+    else:
+        logger.info("Skipping custom JS rendering phase because no eligible URLs remain after applying exclusion rules.")
     
     # Add successful custom JS results to aggregator
     for result in custom_js_successful:
@@ -216,13 +255,12 @@ async def async_fetch_batch(
         )
     
     if decodo_urls:
-        logger.info(f"Phase 2 completed: {len(custom_js_successful)} successful, {len(decodo_urls)} failed after {max_retries} attempts")
+        logger.info(f"Phase 2 completed: {len(custom_js_successful)} successful, {len(decodo_urls)} queued for Decodo")
     else:
         logger.info(f"Phase 2 completed: {len(custom_js_successful)} successful, 0 failed")
     
-    if not decodo_urls or not config.decodo_enabled:
-        # All URLs succeeded or Decodo disabled
-        # Add failed URLs to aggregator
+    if not decodo_urls:
+        # All URLs succeeded after custom JS
         for result in phase2_results:
             if result["status"] == "failed":
                 aggregator.add_result(
@@ -232,7 +270,29 @@ async def async_fetch_batch(
                     status="failed",
                     error=result["error"]
                 )
-        
+        total_time = time.time() - start_time
+        return aggregator.get_final_result(total_time)
+    
+    if not config.decodo_enabled:
+        # Decodo disabled - mark remaining URLs as failed
+        for result in phase2_results:
+            if result["status"] == "failed":
+                aggregator.add_result(
+                    url=result["url"],
+                    html=None,
+                    method="custom_js",
+                    status="failed",
+                    error=result["error"]
+                )
+        logger.warning("Decodo fallback is disabled, but some URLs require Decodo processing. Marking them as failed.")
+        for url in decodo_urls:
+            aggregator.add_result(
+                url=url,
+                html=None,
+                method="decodo",
+                status="failed",
+                error="Decodo fallback disabled"
+            )
         total_time = time.time() - start_time
         return aggregator.get_final_result(total_time)
     

@@ -24,6 +24,10 @@ class BatchRequestConfig(BaseModel):
     custom_js_cooldown_seconds: Optional[int] = Field(default=None, ge=0, le=600, description="Cooldown between batches in seconds")
     custom_js_timeout: Optional[int] = Field(default=None, ge=30, le=600, description="Timeout for custom JS batch requests")
     custom_js_max_retries: Optional[int] = Field(default=None, ge=1, le=20, description="Max retry attempts for failed/skeleton URLs (1-20)")
+    custom_js_skip_domains: Optional[List[str]] = Field(
+        default=None,
+        description="Domains that should skip custom JS entirely and go straight to Decodo"
+    )
     
     # Decodo (fallback)
     decodo_enabled: Optional[bool] = Field(default=None, description="Whether to use Decodo as fallback")

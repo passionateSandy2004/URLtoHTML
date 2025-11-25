@@ -192,6 +192,11 @@ async def fetch_batch(request: BatchRequest):
             else:
                 config.custom_js_max_retries = APIConfig.DEFAULT_CUSTOM_JS_MAX_RETRIES
             
+            if req_config.custom_js_skip_domains is not None:
+                config.set_custom_js_skip_domains(req_config.custom_js_skip_domains)
+            elif APIConfig.CUSTOM_JS_SKIP_DOMAINS:
+                config.set_custom_js_skip_domains(APIConfig.CUSTOM_JS_SKIP_DOMAINS)
+            
             if req_config.decodo_enabled is not None:
                 config.decodo_enabled = req_config.decodo_enabled
             else:
@@ -229,6 +234,8 @@ async def fetch_batch(request: BatchRequest):
             config.custom_js_cooldown_seconds = APIConfig.DEFAULT_CUSTOM_JS_COOLDOWN
             config.custom_js_timeout = APIConfig.DEFAULT_CUSTOM_JS_TIMEOUT
             config.custom_js_max_retries = APIConfig.DEFAULT_CUSTOM_JS_MAX_RETRIES
+            if APIConfig.CUSTOM_JS_SKIP_DOMAINS:
+                config.set_custom_js_skip_domains(APIConfig.CUSTOM_JS_SKIP_DOMAINS)
             config.decodo_enabled = APIConfig.DEFAULT_DECODO_ENABLED
             config.decodo_timeout = APIConfig.DEFAULT_DECODO_TIMEOUT
             config.min_content_length = APIConfig.DEFAULT_MIN_CONTENT_LENGTH

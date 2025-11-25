@@ -53,6 +53,22 @@ class APIConfig:
             if service.strip()
         ]
     
+    # Domains that should skip custom JS entirely and go straight to Decodo
+    CUSTOM_JS_SKIP_DOMAINS: Optional[List[str]] = None
+    if os.getenv("CUSTOM_JS_SKIP_DOMAINS"):
+        CUSTOM_JS_SKIP_DOMAINS = [
+            domain.strip()
+            for domain in os.getenv("CUSTOM_JS_SKIP_DOMAINS").split(",")
+            if domain.strip()
+        ]
+    else:
+        CUSTOM_JS_SKIP_DOMAINS = [
+            "jiomart.com",
+            "lotuselectronics.com",
+            "croma.com",
+            "adidas.co.in"
+        ]
+    
     # Decodo Web Scraping API credentials and configuration
     DECODO_USERNAME: Optional[str] = os.getenv("DECODO_USERNAME")
     DECODO_PASSWORD: Optional[str] = os.getenv("DECODO_PASSWORD")
